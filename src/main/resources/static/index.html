@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MorphiQ - Adaptive AI Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .chat-container {
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            text-align: right;
+        }
+        .ai-message {
+            background-color: #f5f5f5;
+        }
+        .profession-tag {
+            display: inline-block;
+            background-color: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MorphiQ - Adaptive AI Assistant</h1>
+        <p>This AI assistant adapts its behavior based on your profession.</p>
+        
+        <div class="form-group">
+            <label for="userId">User ID:</label>
+            <input type="text" id="userId" placeholder="Enter your user ID" value="user123">
+        </div>
+        
+        <div class="form-group">
+            <label for="profession">Profession:</label>
+            <select id="profession">
+                <option value="doctor">Doctor</option>
+                <option value="engineer">Engineer</option>
+                <option value="teacher">Teacher</option>
+                <option value="lawyer">Lawyer</option>
+                <option value="business">Business Professional</option>
+                <option value="artist">Artist</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="message">Your Message:</label>
+            <textarea id="message" rows="3" placeholder="Type your message here..."></textarea>
+        </div>
+        
+        <button onclick="sendMessage()">Send Message</button>
+        
+        <div class="chat-container">
+            <h2>Conversation</h2>
+            <div id="chat-messages"></div>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const userId = document.getElementById('userId').value;
+            const profession = document.getElementById('profession').value;
+            const message = document.getElementById('message').value;
+            
+            if (!message.trim()) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            // Display user message
+            displayMessage(message, 'user', profession);
+            
+            try {
+                const response = await fetch('/api/chat/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        profession: profession,
+                        message: message
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayMessage(data.response, 'ai', data.professionContext);
+                    document.getElementById('message').value = '';
+                } else {
+                    displayMessage('Error: Unable to get response', 'ai', 'System');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayMessage('Error: ' + error.message, 'ai', 'System');
+            }
+        }
+        
+        function displayMessage(text, sender, profession) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            const messageContent = document.createElement('div');
+            messageContent.textContent = text;
+            
+            const professionTag = document.createElement('span');
+            professionTag.className = 'profession-tag';
+            professionTag.textContent = profession;
+            
+            messageContent.appendChild(professionTag);
+            messageDiv.appendChild(messageContent);
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Allow sending message with Enter key
+        document.getElementById('message').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
