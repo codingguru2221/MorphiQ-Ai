@@ -46,6 +46,7 @@
             cursor: pointer;
             width: 100%;
             font-size: 16px;
+            margin-top: 10px;
         }
         button:hover {
             background-color: #0056b3;
@@ -76,6 +77,33 @@
             font-size: 12px;
             margin-left: 10px;
         }
+        .model-training-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #e9ecef;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -83,37 +111,118 @@
         <h1>MorphiQ - Adaptive AI Assistant</h1>
         <p>This AI assistant adapts its behavior based on your profession.</p>
         
-        <div class="form-group">
-            <label for="userId">User ID:</label>
-            <input type="text" id="userId" placeholder="Enter your user ID" value="user123">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('chat')">Chat</div>
+            <div class="tab" onclick="switchTab('train')">Train Models</div>
         </div>
         
-        <div class="form-group">
-            <label for="profession">Profession:</label>
-            <select id="profession">
-                <option value="doctor">Doctor</option>
-                <option value="engineer">Engineer</option>
-                <option value="teacher">Teacher</option>
-                <option value="lawyer">Lawyer</option>
-                <option value="business">Business Professional</option>
-                <option value="artist">Artist</option>
-            </select>
+        <div id="chat-tab" class="tab-content active">
+            <div class="form-group">
+                <label for="userId">User ID:</label>
+                <input type="text" id="userId" placeholder="Enter your user ID" value="user123">
+            </div>
+            
+            <div class="form-group">
+                <label for="profession">Profession:</label>
+                <select id="profession">
+                    <option value="doctor">Doctor</option>
+                    <option value="engineer">Engineer</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="lawyer">Lawyer</option>
+                    <option value="businessman">Businessman</option>
+                    <option value="artist">Artist</option>
+                    <option value="scientist">Scientist</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="message">Message:</label>
+                <textarea id="message" rows="4" placeholder="Type your message here..."></textarea>
+            </div>
+            
+            <button onclick="sendMessage()">Send Message</button>
+            
+            <div class="chat-container">
+                <h3>Conversation</h3>
+                <div id="conversation"></div>
+            </div>
         </div>
         
-        <div class="form-group">
-            <label for="message">Your Message:</label>
-            <textarea id="message" rows="3" placeholder="Type your message here..."></textarea>
-        </div>
-        
-        <button onclick="sendMessage()">Send Message</button>
-        
-        <div class="chat-container">
-            <h2>Conversation</h2>
-            <div id="chat-messages"></div>
+        <div id="train-tab" class="tab-content">
+            <div class="model-training-section">
+                <h2>Train New AI Model</h2>
+                <div class="form-group">
+                    <label for="modelName">Model Name:</label>
+                    <input type="text" id="modelName" placeholder="e.g., doctor-model-v1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="modelProfession">Profession:</label>
+                    <select id="modelProfession">
+                        <option value="doctor">Doctor</option>
+                        <option value="engineer">Engineer</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="lawyer">Lawyer</option>
+                        <option value="businessman">Businessman</option>
+                        <option value="artist">Artist</option>
+                        <option value="scientist">Scientist</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="trainingDataPath">Training Data Path:</label>
+                    <input type="text" id="trainingDataPath" placeholder="Path to training data folder">
+                </div>
+                
+                <div class="form-group">
+                    <label for="behaviorPatterns">Behavior Patterns:</label>
+                    <textarea id="behaviorPatterns" rows="3" placeholder="Describe behavior patterns..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="communicationStyles">Communication Styles:</label>
+                    <textarea id="communicationStyles" rows="3" placeholder="Describe communication styles..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="workflowPreferences">Workflow Preferences:</label>
+                    <textarea id="workflowPreferences" rows="3" placeholder="Describe workflow preferences..."></textarea>
+                </div>
+                
+                <button onclick="trainModel()">Train Model</button>
+                
+                <div id="trainingResult" style="margin-top: 15px;"></div>
+            </div>
+            
+            <div class="model-training-section">
+                <h2>Existing Models</h2>
+                <button onclick="listModels()">Refresh Model List</button>
+                <div id="modelList" style="margin-top: 15px;"></div>
+            </div>
         </div>
     </div>
 
     <script>
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+        
         async function sendMessage() {
             const userId = document.getElementById('userId').value;
             const profession = document.getElementById('profession').value;
@@ -123,9 +232,6 @@
                 alert('Please enter a message');
                 return;
             }
-            
-            // Display user message
-            displayMessage(message, 'user', profession);
             
             try {
                 const response = await fetch('/api/chat/message', {
@@ -140,45 +246,108 @@
                     })
                 });
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    displayMessage(data.response, 'ai', data.professionContext);
-                    document.getElementById('message').value = '';
+                const data = await response.json();
+                
+                // Display the conversation
+                const conversationDiv = document.getElementById('conversation');
+                conversationDiv.innerHTML += `
+                    <div class="message user-message">
+                        <strong>You (${profession}):</strong> ${message}
+                    </div>
+                    <div class="message ai-message">
+                        <strong>AI (${data.professionContext}):</strong> ${data.response}
+                        <span class="profession-tag">${data.tone}</span>
+                    </div>
+                `;
+                
+                // Clear message input
+                document.getElementById('message').value = '';
+                
+                // Scroll to bottom
+                conversationDiv.scrollTop = conversationDiv.scrollHeight;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error sending message: ' + error.message);
+            }
+        }
+        
+        async function trainModel() {
+            const modelName = document.getElementById('modelName').value;
+            const profession = document.getElementById('modelProfession').value;
+            const trainingDataPath = document.getElementById('trainingDataPath').value;
+            const behaviorPatterns = document.getElementById('behaviorPatterns').value;
+            const communicationStyles = document.getElementById('communicationStyles').value;
+            const workflowPreferences = document.getElementById('workflowPreferences').value;
+            
+            if (!modelName.trim()) {
+                alert('Please enter a model name');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/models/train', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        modelName: modelName,
+                        profession: profession,
+                        trainingDataPath: trainingDataPath,
+                        behaviorPatterns: behaviorPatterns,
+                        communicationStyles: communicationStyles,
+                        workflowPreferences: workflowPreferences
+                    })
+                });
+                
+                const data = await response.json();
+                
+                const resultDiv = document.getElementById('trainingResult');
+                resultDiv.innerHTML = `
+                    <div class="alert alert-${data.status === 'SUCCESS' ? 'success' : 'danger'}">
+                        <strong>${data.status}:</strong> ${data.message}
+                        ${data.trainingStartTime ? `<br>Started: ${new Date(data.trainingStartTime * 1000).toLocaleString()}` : ''}
+                        ${data.trainingEndTime ? `<br>Finished: ${new Date(data.trainingEndTime * 1000).toLocaleString()}` : ''}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('trainingResult').innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function listModels() {
+            try {
+                const response = await fetch('/api/models/list');
+                const data = await response.json();
+                
+                const modelListDiv = document.getElementById('modelList');
+                if (data.status === 'SUCCESS' && data.modelNames && data.modelNames.length > 0) {
+                    modelListDiv.innerHTML = `
+                        <h3>Available Models:</h3>
+                        <ul>
+                            ${data.modelNames.map(name => `<li>${name}</li>`).join('')}
+                        </ul>
+                    `;
                 } else {
-                    displayMessage('Error: Unable to get response', 'ai', 'System');
+                    modelListDiv.innerHTML = '<p>No models found.</p>';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                displayMessage('Error: ' + error.message, 'ai', 'System');
+                document.getElementById('modelList').innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
             }
         }
         
-        function displayMessage(text, sender, profession) {
-            const chatMessages = document.getElementById('chat-messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}-message`;
-            
-            const messageContent = document.createElement('div');
-            messageContent.textContent = text;
-            
-            const professionTag = document.createElement('span');
-            professionTag.className = 'profession-tag';
-            professionTag.textContent = profession;
-            
-            messageContent.appendChild(professionTag);
-            messageDiv.appendChild(messageContent);
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        // Allow sending message with Enter key
-        document.getElementById('message').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
+        // Load model list when training tab is opened
+        document.querySelector('.tab:nth-child(2)').addEventListener('click', listModels);
     </script>
 </body>
 </html>

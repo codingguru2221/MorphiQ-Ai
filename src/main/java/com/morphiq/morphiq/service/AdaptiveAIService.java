@@ -2,7 +2,9 @@ package com.morphiq.morphiq.service;
 
 import com.morphiq.morphiq.dto.ChatRequest;
 import com.morphiq.morphiq.dto.ChatResponse;
+import com.morphiq.morphiq.model.AIModel;
 import com.morphiq.morphiq.model.UserProfile;
+import com.morphiq.morphiq.repository.AIModelRepository;
 import com.morphiq.morphiq.repository.UserProfileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,10 +20,12 @@ public class AdaptiveAIService {
     private String openAiApiKey;
 
     private final UserProfileRepository userProfileRepository;
+    private final AIModelRepository aiModelRepository;
 
     @Autowired
-    public AdaptiveAIService(UserProfileRepository userProfileRepository) {
+    public AdaptiveAIService(UserProfileRepository userProfileRepository, AIModelRepository aiModelRepository) {
         this.userProfileRepository = userProfileRepository;
+        this.aiModelRepository = aiModelRepository;
     }
 
     public ChatResponse processMessage(ChatRequest chatRequest) {
@@ -66,6 +70,37 @@ public class AdaptiveAIService {
     }
 
     private String generateAdaptedResponse(ChatRequest chatRequest, UserProfile userProfile) {
+        // Check if there's a trained model for this profession
+        Optional<AIModel> trainedModel = aiModelRepository.findByProfession(userProfile.getProfession());
+        
+        if (trainedModel.isPresent()) {
+            // Use the trained model's behavior patterns
+            return generateResponseUsingTrainedModel(chatRequest, userProfile, trainedModel.get());
+        } else {
+            // Fall back to the default behavior
+            return generateDefaultResponse(chatRequest, userProfile);
+        }
+    }
+
+    private String generateResponseUsingTrainedModel(ChatRequest chatRequest, UserProfile userProfile, AIModel trainedModel) {
+        // In a real implementation, this would use the trained model
+        // For now, we'll simulate using the trained model's behavior patterns
+        
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("You are an AI assistant trained to behave as a ")
+              .append(userProfile.getProfession())
+              .append(" with these characteristics:\n")
+              .append("Behavior Patterns: ").append(trainedModel.getBehaviorPatterns()).append("\n")
+              .append("Communication Style: ").append(trainedModel.getCommunicationStyles()).append("\n")
+              .append("Workflow Preferences: ").append(trainedModel.getWorkflowPreferences()).append("\n")
+              .append("Respond to the following message: ")
+              .append(chatRequest.getMessage());
+              
+        // In a real implementation, we would use the trained model to generate the response
+        return generateSimulatedResponseWithModel(chatRequest.getMessage(), trainedModel);
+    }
+
+    private String generateDefaultResponse(ChatRequest chatRequest, UserProfile userProfile) {
         // In a real implementation, this would integrate with OpenAI API through LangChain4j
         // For now, we'll simulate adaptive responses based on profession
         
@@ -87,6 +122,13 @@ public class AdaptiveAIService {
         
         // Simulated responses for different professions
         return generateSimulatedResponse(chatRequest.getMessage(), userProfile.getProfession());
+    }
+
+    private String generateSimulatedResponseWithModel(String message, AIModel trainedModel) {
+        // Simulate response using trained model characteristics
+        return "As a trained " + trainedModel.getProfession() + ", I understand your query about '" + message + 
+               "'. Based on my specialized training, I recommend approaching this from a " + 
+               trainedModel.getBehaviorPatterns() + " perspective.";
     }
 
     private String generateSimulatedResponse(String message, String profession) {

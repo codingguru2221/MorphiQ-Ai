@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class MorphiQApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(MorphiQApplication.class, args);
+        SpringApplication.run(MorphiQApplication.class, args);
 	}
 
 }

@@ -14,7 +14,7 @@
 	<name>MorphiQ</name>
 	<description>an ai based model</description>
 	<properties>
-		<java.version>24</java.version>
+		<java.version>17</java.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -41,7 +41,7 @@
 			<artifactId>client</artifactId>
 			<version>0.18.2</version>
 		</dependency>
-
+		
 		<!-- LangChain4j -->
 		<dependency>
 			<groupId>dev.langchain4j</groupId>
@@ -100,8 +100,8 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
-					<source>24</source>
-					<target>24</target>
+					<source>17</source>
+					<target>17</target>
 				</configuration>
 			</plugin>
 		</plugins>
