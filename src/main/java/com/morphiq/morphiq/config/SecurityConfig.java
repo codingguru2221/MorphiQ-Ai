@@ -15,12 +15,21 @@ public class SecurityConfig {
 
     @Bean
     public InMemoryUserDetailsManager userDetailsService() {
+        // Regular user - can only chat
         UserDetails user = User.withDefaultPasswordEncoder()
                 .username("user")
                 .password("Codex")
                 .roles("USER")
                 .build();
-        return new InMemoryUserDetailsManager(user);
+                
+        // Admin user - can chat and train models
+        UserDetails admin = User.withDefaultPasswordEncoder()
+                .username("admin")
+                .password("Codex")
+                .roles("ADMIN")
+                .build();
+                
+        return new InMemoryUserDetailsManager(user, admin);
     }
 
     @Bean
@@ -28,6 +37,9 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/", "/index.html", "/login.html", "/static/**").permitAll()
+                .requestMatchers("/api/chat/**").hasAnyRole("USER", "ADMIN")
+                .requestMatchers("/api/models/train", "/api/models/behavior/**").hasRole("ADMIN")
+                .requestMatchers("/api/models/**").hasAnyRole("USER", "ADMIN")
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
@@ -39,7 +51,8 @@ public class SecurityConfig {
             .logout(logout -> logout
                 .logoutSuccessUrl("/login.html")
                 .permitAll()
-            );
+            )
+            .csrf(csrf -> csrf.disable()); // Disable CSRF for simplicity in development
         return http.build();
     }
 }

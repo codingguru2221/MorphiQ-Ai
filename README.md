@@ -74,6 +74,14 @@ src/
   - Username: sa
   - Password: (empty)
 
+### Using the Voice Assistant
+
+1. Open the application in a modern browser (Chrome recommended)
+2. Click "Start Voice Command" to begin speaking
+3. Speak your question or command clearly
+4. The assistant will listen, process your request, and respond verbally
+5. The visual indicator will show listening (red) and speaking (blue) states
+
 ### API Endpoints
 
 - `POST /api/chat/message` - Send a message to the AI assistant
@@ -94,6 +102,8 @@ Example request:
 - **Conversation History**: Maintains conversation context
 - **RESTful API**: Clean and intuitive API design
 - **Responsive Web Interface**: Simple chat interface for testing
+- **Voice Assistant**: Speech recognition and synthesis for hands-free interaction
+- **Visual Feedback**: Dynamic UI indicators for listening and speaking states
 
 ## 📅 Project Timeline
 

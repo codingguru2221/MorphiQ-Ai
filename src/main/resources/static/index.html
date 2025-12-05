@@ -82,6 +82,7 @@
             padding: 20px;
             background-color: #f8f9fa;
             border-radius: 5px;
+            display: none; /* Hidden by default, shown only for admins */
         }
         .tabs {
             display: flex;
@@ -104,16 +105,35 @@
         .tab-content.active {
             display: block;
         }
+        .user-info {
+            text-align: right;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .logout-link {
+            color: #007bff;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        .logout-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="user-info">
+            Logged in as: <span id="username">user</span>
+            <a href="/logout" class="logout-link">Logout</a>
+        </div>
+        
         <h1>MorphiQ - Adaptive AI Assistant</h1>
         <p>This AI assistant adapts its behavior based on your profession.</p>
         
         <div class="tabs">
             <div class="tab active" onclick="switchTab('chat')">Chat</div>
-            <div class="tab" onclick="switchTab('train')">Train Models</div>
+            <div class="tab" onclick="switchTab('train')" id="train-tab" style="display:none;">Train Models</div>
         </div>
         
         <div id="chat-tab" class="tab-content active">
@@ -136,21 +156,29 @@
                 </select>
             </div>
             
-            <div class="form-group">
-                <label for="message">Message:</label>
-                <textarea id="message" rows="4" placeholder="Type your message here..."></textarea>
-            </div>
-            
-            <button onclick="sendMessage()">Send Message</button>
-            
-            <div class="chat-container">
-                <h3>Conversation</h3>
-                <div id="conversation"></div>
+            <!-- Voice Assistant Component -->
+            <div id="voice-assistant-container">
+                <h3>Voice Assistant</h3>
+                <p>Click the button below to start speaking with the AI assistant</p>
+                
+                <div id="voice-indicator" style="width: 150px; height: 150px; border-radius: 50%; background: #060606; margin: 20px auto; display: flex; justify-content: center; align-items: center; transition: all 0.3s ease;">
+                    <div style="width: 120px; height: 120px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);"></div>
+                </div>
+                
+                <button id="voice-button" onclick="toggleVoiceAssistant()" style="padding: 12px 24px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 30px; cursor: pointer; transition: all 0.3s ease;">
+                    Start Voice Command
+                </button>
+                
+                <div id="voice-status" style="margin-top: 10px; min-height: 20px;"></div>
+                
+                <div id="voice-transcript" style="background-color: #f0f8ff; padding: 15px; border-radius: 10px; margin: 15px 0; display: none;"></div>
+                
+                <div id="voice-response" style="background-color: #f5f5f5; padding: 15px; border-radius: 10px; margin: 15px 0; display: none;"></div>
             </div>
         </div>
         
         <div id="train-tab" class="tab-content">
-            <div class="model-training-section">
+            <div class="model-training-section" id="model-training-section">
                 <h2>Train New AI Model</h2>
                 <div class="form-group">
                     <label for="modelName">Model Name:</label>
@@ -205,6 +233,28 @@
     </div>
 
     <script>
+        // Check user role on page load
+        window.onload = function() {
+            fetch('/api/user/info', {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('username').textContent = data.username;
+                // Show training tab only for admins
+                if (data.roles.includes('ADMIN')) {
+                    document.getElementById('train-tab').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching user info:', error);
+            });
+            
+            // Initialize voice assistant
+            initVoiceAssistant();
+        };
+        
         function switchTab(tabName) {
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -243,7 +293,8 @@
                         userId: userId,
                         profession: profession,
                         message: message
-                    })
+                    }),
+                    credentials: 'same-origin' // Add this to include cookies/session
                 });
                 
                 const data = await response.json();
@@ -297,14 +348,16 @@
                         behaviorPatterns: behaviorPatterns,
                         communicationStyles: communicationStyles,
                         workflowPreferences: workflowPreferences
-                    })
+                    }),
+                    credentials: 'same-origin' // Add this to include cookies/session
                 });
                 
                 const data = await response.json();
                 
                 const resultDiv = document.getElementById('trainingResult');
+                const alertClass = data.status === 'SUCCESS' ? 'success' : 'danger';
                 resultDiv.innerHTML = `
-                    <div class="alert alert-${data.status === 'SUCCESS' ? 'success' : 'danger'}">
+                    <div class="alert alert-${alertClass}">
                         <strong>${data.status}:</strong> ${data.message}
                         ${data.trainingStartTime ? `<br>Started: ${new Date(data.trainingStartTime * 1000).toLocaleString()}` : ''}
                         ${data.trainingEndTime ? `<br>Finished: ${new Date(data.trainingEndTime * 1000).toLocaleString()}` : ''}
@@ -322,7 +375,9 @@
         
         async function listModels() {
             try {
-                const response = await fetch('/api/models/list');
+                const response = await fetch('/api/models/list', {
+                    credentials: 'same-origin' // Add this to include cookies/session
+                });
                 const data = await response.json();
                 
                 const modelListDiv = document.getElementById('modelList');
@@ -348,6 +403,167 @@
         
         // Load model list when training tab is opened
         document.querySelector('.tab:nth-child(2)').addEventListener('click', listModels);
+        
+        // Voice Assistant Functions
+        let recognition;
+        let isListening = false;
+        let synth = window.speechSynthesis;
+        
+        // Initialize speech recognition
+        function initVoiceAssistant() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+        
+                recognition.onresult = function(event) {
+                    const transcript = Array.from(event.results)
+                        .map(result => result[0])
+                        .map(result => result.transcript)
+                        .join('');
+                    document.getElementById('voice-transcript').innerHTML = `<h4>You said:</h4><p>${transcript}</p>`;
+                    document.getElementById('voice-transcript').style.display = 'block';
+                    
+                    // Send the voice message
+                    sendVoiceMessage(transcript);
+                };
+        
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error', event.error);
+                    isListening = false;
+                    updateVoiceUI();
+                };
+        
+                recognition.onend = function() {
+                    isListening = false;
+                    updateVoiceUI();
+                };
+            } else {
+                console.warn('Speech recognition not supported in this browser.');
+                document.getElementById('voice-status').innerHTML = '<p style="color: red;">Speech recognition not supported in this browser.</p>';
+            }
+        }
+        
+        // Toggle voice assistant
+        function toggleVoiceAssistant() {
+            if (!recognition) {
+                initVoiceAssistant();
+            }
+            
+            if (isListening) {
+                recognition.stop();
+                isListening = false;
+            } else {
+                // Clear previous results
+                document.getElementById('voice-transcript').style.display = 'none';
+                document.getElementById('voice-response').style.display = 'none';
+                
+                recognition.start();
+                isListening = true;
+            }
+            
+            updateVoiceUI();
+        }
+        
+        // Update UI based on voice assistant state
+        function updateVoiceUI() {
+            const button = document.getElementById('voice-button');
+            const status = document.getElementById('voice-status');
+            const indicator = document.getElementById('voice-indicator');
+            
+            if (isListening) {
+                button.textContent = 'Stop Listening';
+                button.style.backgroundColor = '#ff3e1c';
+                status.innerHTML = '<p style="color: #ff3e1c; font-weight: bold;">Listening...</p>';
+                indicator.style.boxShadow = '0 0 20px #ff3e1c88, 0 0 40px #ff3e1c88';
+                indicator.style.transform = 'scale(1.1)';
+            } else {
+                button.textContent = 'Start Voice Command';
+                button.style.backgroundColor = '#007bff';
+                status.innerHTML = '';
+                indicator.style.boxShadow = 'none';
+                indicator.style.transform = 'scale(1)';
+            }
+        }
+        
+        // Send voice message to backend
+        async function sendVoiceMessage(message) {
+            const userId = document.getElementById('userId').value;
+            const profession = document.getElementById('profession').value;
+            
+            if (!message.trim()) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/chat/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        profession: profession,
+                        message: message
+                    }),
+                    credentials: 'same-origin'
+                });
+                
+                const data = await response.json();
+                
+                // Display the response
+                const responseText = `${data.response}`;
+                document.getElementById('voice-response').innerHTML = `<h4>AI Response:</h4><p>${responseText}</p>`;
+                document.getElementById('voice-response').style.display = 'block';
+                
+                // Speak the response
+                speakResponse(responseText);
+            } catch (error) {
+                console.error('Error:', error);
+                const errorMsg = "Sorry, I encountered an error processing your request.";
+                document.getElementById('voice-response').innerHTML = `<h4>AI Response:</h4><p>${errorMsg}</p>`;
+                document.getElementById('voice-response').style.display = 'block';
+                speakResponse(errorMsg);
+            }
+        }
+        
+        // Speak the response
+        function speakResponse(text) {
+            if (synth.speaking) {
+                synth.cancel();
+            }
+            
+            const indicator = document.getElementById('voice-indicator');
+            indicator.style.backgroundColor = '#1c8cff';
+            indicator.style.boxShadow = '0 0 20px #1c8cff88, 0 0 40px #1c8cff88';
+            
+            const status = document.getElementById('voice-status');
+            status.innerHTML = '<p style="color: #1c8cff; font-weight: bold;">Speaking...</p>';
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            
+            utterance.onend = function() {
+                indicator.style.backgroundColor = '#060606';
+                indicator.style.boxShadow = 'none';
+                status.innerHTML = '';
+                updateVoiceUI();
+            };
+            
+            utterance.onerror = function() {
+                indicator.style.backgroundColor = '#060606';
+                indicator.style.boxShadow = 'none';
+                status.innerHTML = '';
+                updateVoiceUI();
+            };
+            
+            synth.speak(utterance);
+        }
+        
     </script>
 </body>
 </html>
