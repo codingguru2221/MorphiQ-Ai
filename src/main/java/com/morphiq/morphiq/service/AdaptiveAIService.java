@@ -10,6 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+// Import OpenAI and LangChain4j classes
+import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.chat.ChatLanguageModel;
+
 import java.time.Instant;
 import java.util.Optional;
 
@@ -83,45 +87,55 @@ public class AdaptiveAIService {
     }
 
     private String generateResponseUsingTrainedModel(ChatRequest chatRequest, UserProfile userProfile, AIModel trainedModel) {
-        // In a real implementation, this would use the trained model
-        // For now, we'll simulate using the trained model's behavior patterns
-        
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("You are an AI assistant trained to behave as a ")
-              .append(userProfile.getProfession())
-              .append(" with these characteristics:\n")
-              .append("Behavior Patterns: ").append(trainedModel.getBehaviorPatterns()).append("\n")
-              .append("Communication Style: ").append(trainedModel.getCommunicationStyles()).append("\n")
-              .append("Workflow Preferences: ").append(trainedModel.getWorkflowPreferences()).append("\n")
-              .append("Respond to the following message: ")
-              .append(chatRequest.getMessage());
-              
-        // In a real implementation, we would use the trained model to generate the response
-        return generateSimulatedResponseWithModel(chatRequest.getMessage(), trainedModel);
+        // Use OpenAI API through LangChain4j if API key is available
+        if (!openAiApiKey.isEmpty()) {
+            try {
+                ChatLanguageModel model = OpenAiChatModel.withApiKey(openAiApiKey);
+                
+                StringBuilder prompt = new StringBuilder();
+                prompt.append("You are an AI assistant trained to behave as a ")
+                      .append(userProfile.getProfession())
+                      .append(" with these characteristics:\n")
+                      .append("Behavior Patterns: ").append(trainedModel.getBehaviorPatterns()).append("\n")
+                      .append("Communication Style: ").append(trainedModel.getCommunicationStyles()).append("\n")
+                      .append("Workflow Preferences: ").append(trainedModel.getWorkflowPreferences()).append("\n")
+                      .append("Respond to the following message in a way that aligns with these characteristics: ")
+                      .append(chatRequest.getMessage());
+                      
+                return model.generate(prompt.toString());
+            } catch (Exception e) {
+                // Fallback to simulated response if OpenAI call fails
+                return generateSimulatedResponseWithModel(chatRequest.getMessage(), trainedModel);
+            }
+        } else {
+            // Fallback to simulated response if no API key
+            return generateSimulatedResponseWithModel(chatRequest.getMessage(), trainedModel);
+        }
     }
 
     private String generateDefaultResponse(ChatRequest chatRequest, UserProfile userProfile) {
-        // In a real implementation, this would integrate with OpenAI API through LangChain4j
-        // For now, we'll simulate adaptive responses based on profession
-        
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("You are an AI assistant behaving as a ")
-              .append(userProfile.getProfession())
-              .append(". Respond to the following message in a way that aligns with ")
-              .append(userProfile.getProfession())
-              .append(" profession's communication style and workflow preferences: ")
-              .append(chatRequest.getMessage());
-              
-        // In a real implementation, we would use:
-        /*
+        // Use OpenAI API through LangChain4j if API key is available
         if (!openAiApiKey.isEmpty()) {
-            // ChatLanguageModel model = OpenAiChatModel.withApiKey(openAiApiKey);
-            return model.generate(prompt.toString());
+            try {
+                ChatLanguageModel model = OpenAiChatModel.withApiKey(openAiApiKey);
+                
+                StringBuilder prompt = new StringBuilder();
+                prompt.append("You are an AI assistant behaving as a ")
+                      .append(userProfile.getProfession())
+                      .append(". Respond to the following message in a way that aligns with ")
+                      .append(userProfile.getProfession())
+                      .append(" profession's communication style and workflow preferences: ")
+                      .append(chatRequest.getMessage());
+                      
+                return model.generate(prompt.toString());
+            } catch (Exception e) {
+                // Fallback to simulated response if OpenAI call fails
+                return generateSimulatedResponse(chatRequest.getMessage(), userProfile.getProfession());
+            }
+        } else {
+            // Fallback to simulated response if no API key
+            return generateSimulatedResponse(chatRequest.getMessage(), userProfile.getProfession());
         }
-        */
-        
-        // Simulated responses for different professions
-        return generateSimulatedResponse(chatRequest.getMessage(), userProfile.getProfession());
     }
 
     private String generateSimulatedResponseWithModel(String message, AIModel trainedModel) {

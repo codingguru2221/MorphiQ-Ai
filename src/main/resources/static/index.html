@@ -156,6 +156,14 @@
                 </select>
             </div>
             
+            <!-- Text Chat Interface -->
+            <div class="form-group">
+                <label for="message">Message:</label>
+                <textarea id="message" rows="4" placeholder="Type your message here..."></textarea>
+            </div>
+            
+            <button onclick="sendMessage()">Send Message</button>
+            
             <!-- Voice Assistant Component -->
             <div id="voice-assistant-container">
                 <h3>Voice Assistant</h3>
@@ -299,8 +307,19 @@
                 
                 const data = await response.json();
                 
+                // Create conversation div if it doesn't exist
+                let conversationDiv = document.getElementById('conversation');
+                if (!conversationDiv) {
+                    const chatContainer = document.createElement('div');
+                    chatContainer.id = 'conversation';
+                    chatContainer.className = 'chat-container';
+                    chatContainer.style.maxHeight = '400px';
+                    chatContainer.style.overflowY = 'auto';
+                    document.querySelector('#chat-tab').appendChild(chatContainer);
+                    conversationDiv = chatContainer;
+                }
+                
                 // Display the conversation
-                const conversationDiv = document.getElementById('conversation');
                 conversationDiv.innerHTML += `
                     <div class="message user-message">
                         <strong>You (${profession}):</strong> ${message}
